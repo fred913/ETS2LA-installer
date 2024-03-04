@@ -1,260 +1,438 @@
-"""
-
-This file is responsible for making sure all the app's requirements are properly installed, before even trying to launch the python installer.
-
-This file will also be packaged as an exe file, since most people don't even know what .bat files are :)
-
-"""
-BYPASS_CHECKS = False
-DEFAULT_INSTALL_LOCATION = "C:\\LaneAssist"
-
+# Path: installer.py
+#region Global variables
+DEFAULT_INSTALL_LOCATION = r"C:/LaneAssist"
+DEFAULT_SERVER = "github"
+SERVERS = {
+    "github": "https://github.com/Tumppi066/Euro-Truck-Simulator-2-Lane-Assist",
+    "sourceforge": "https://sourceforge.net/projects/eurotrucksimulator2-laneassist/"
+}
+BRANCHES = {
+    "main": "main",
+    "development": "development"
+}
+WINDOW_WIDTH = 500
+WINDOW_HEIGHT = 250
+PYTHON_VERSIONS = ["3.11", "3.10"]
+PASTEL_GREEN = "#aaffa8"
+PASTEL_RED = "#ff8a8a"
+PASTEL_YELLOW = "#fffb8a"
+GIT_DOWNLOAD_URL = "https://github.com/git-for-windows/git/releases/download/v2.44.0.windows.1/Git-2.44.0-64-bit.exe"
+PYTHON_DOWNLOAD_URL = "https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe"
+#endregion
+#region Imports
+import tkinter as tk
+from tkinter import ttk
+import sv_ttk as sv
 import os
 import sys
-import subprocess
+import time
+#endregion
+#region Tkinter init
+root = tk.Tk()
+root.configure(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+root.pack_propagate(False)
+root.grid_propagate(False)
+root.title("Lane Assist Installer")
+#endregion
+#region Functions
 
-try: 
-    import webbrowser
-except: 
-    os.system("pip install webbrowser")
-    import webbrowser
-
-# Parse the command line arguments
-if len(sys.argv) > 1:
-    if sys.argv[1] == "--bypass":
-        BYPASS_CHECKS = True
-        
-
-def PrintRed(text):
-    """
-    Print text in red
-    """
-    print("\033[91m {}\033[00m".format(text))
-
-def CheckForWinget():
-    """
-    Check if winget is installed on the system
-    """
-    try:
-        subprocess.run(["winget", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except:
-        return False
-
-def InstallWinget():
-    """
-    Install winget on the system
-    """
-    print("Opening winget install page...")
-    subprocess.run(["start", "ms-windows-store://pdp?launch=true&mode=mini&hl=en-gb&gl=us&productid=9NBLGGH4NNS1"])
-    from tkinter import messagebox
-    messagebox.showinfo("Winget Installer", "Winget is not installed on your system. We have opened the installation page for you. Please install it and run this installer again.")
-    exit()
-    
-def CheckForPython():
-    """
-    Check if python is installed on the system
-    """
-    try:
-        version = subprocess.run(["python", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Check that the version is 3.11.x
-        if version.stdout.decode("utf-8").split(" ")[1].split(".")[0] == "3" and version.stdout.decode("utf-8").split(" ")[1].split(".")[1] == "11":
-            return True
-        else:
-            return False
-    except:
-        return False
-    
-def InstallPython():
-    """
-    Install python on the system
-    """
-    try:
-        subprocess.run(["winget", "install", "Python.Python.3.11"])
-    except:
-        PrintRed("Failed to install python. Please install it manually.")
-        from tkinter import messagebox
-        webbrowser.open("https://wiki.tumppi066.fi/tutorials/installing-the-correct-python-version")
-        messagebox.showinfo("Python Installer", "Python 3.11.x is not installed on your system. Please uninstall all your previous versions, and install 3.11.x manually. Then run this installer again.")
-        exit()
-       
-def CheckGit():
-    """
-    Check if git is installed on the system
-    """
-    try:
-        subprocess.run(["git", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except:
-        return False
-
-def InstallGit():
-    """
-    Install git on the system
-    """
-    try:
-        subprocess.run(["winget", "install", "Git.Git"])
-    except:
-        PrintRed("Failed to install git. Please install it manually.")
-        from tkinter import messagebox
-        messagebox.showinfo("Git Installer", "Failed to install git automatically, please download it from the website we will open after closing this window. Then run this installer again.")
-        webbrowser.open("https://git-scm.com/download/win")
-        exit()
-       
-def ColorTitleBar(root):
-    # Change the titlebar color
+def colorTitleBar():
     from ctypes import windll, c_int, byref, sizeof
     HWND = windll.user32.GetParent(root.winfo_id())
     returnCode = windll.dwmapi.DwmSetWindowAttribute(HWND, 35, byref(c_int(0x1c1c1c)), sizeof(c_int))
-       
 
-def AskForPath():
-    from tkinter import filedialog
-    return filedialog.askdirectory()
+def emptyLine(frame, size=12):
+    ttk.Label(frame, text="", font=("Segoe UI", size)).pack()
 
-def OpenFolder(path):
-    os.system("start " + path)
-   
-def Install(path, mirror):
-    global installButton
-    global root
+#endregion
+#region Pages
+class CheckGitPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Checking for git", font=("Segoe UI", 16))
+        self.label.pack()
+        emptyLine(self, 16)
+        self.checkGit()
+    def checkGit(self):
+        import subprocess
+        try:
+            subprocess.run(["git", "--version"])
+            self.label.config(text="Git found", foreground=PASTEL_GREEN)
+            self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+            self.button.pack(side="bottom")
+        except FileNotFoundError:
+            self.label.config(text="Git not found", foreground=PASTEL_RED)
+            self.installButton = ttk.Button(self, text="Install", command=self.installGit, width=30)
+            self.installButton.pack(pady=10)
+            self.button = ttk.Button(self, text="Exit", command=sys.exit, width=30)
+            self.button.pack(side="bottom")
+    def installGit(self):
+        import requests
+        filename = GIT_DOWNLOAD_URL.split("/")[-1]
+        # Streaming, so we can iterate over the response.
+        response = requests.get(GIT_DOWNLOAD_URL, stream=True)
 
-    from tkinter import messagebox
-    messagebox.showinfo("Installation", "The installation will now begin. The app will be unresponsive during installation. Please wait until the installation is complete.")
-    if mirror == "Github":
-        installButton.config(text="Cloning from Github...")
-        root.update()
-        os.system("git clone -b installer --single-branch https://github.com/Tumppi066/Euro-Truck-Simulator-2-Lane-Assist.git " + path)
-        installButton.config(text="Open folder (open the menu.bat file in there)")
-        installButton.config(command=lambda: OpenFolder(path))
-        installButton.config(style="Accent.TButton")
-        messagebox.showinfo("Installation", "The installation is complete.")
-    if mirror == "Sourceforge":
-        installButton.config(text="Cloning from Sourceforge...")
-        root.update()
-        os.system("git clone -b installer --single-branch https://git.code.sf.net/p/eurotrucksimulator2-laneassist/code " + path)
-        installButton.config(text="Open folder (open the menu.bat file in there)")
-        installButton.config(command=lambda: OpenFolder(path))
-        installButton.config(style="Accent.TButton")
-        messagebox.showinfo("Installation", "The installation is complete.")
-   
+        # Sizes in bytes.
+        total_size = int(response.headers.get("content-length", 0))
+        block_size = 1024
+
+        lastUpdate = time.time()
+        downloaded_size = 0
+        with open(filename, "wb") as file:
+            for data in response.iter_content(block_size):
+                file.write(data)
+                downloaded_size += len(data)
+                percentage = (downloaded_size / total_size) * 100
+                print(f"Downloaded: {downloaded_size}/{total_size} bytes ({percentage:.2f}%)               ", end="\r")
+                if time.time() - lastUpdate > 0.1:
+                    self.installButton.config(text=f"Downloading {percentage:.2f}%", state="disabled")
+                    self.master.update()
+                    self.update()
+                    lastUpdate = time.time()
+
+        self.installButton.config(text="Installing", state="disabled")
+        self.master.update()
+        self.update()
+        from tkinter import messagebox
+        messagebox.showinfo("Git installer", "The installer will now open. You can use the default settings. After the installation is complete, click check.")
+        # Run the installer silently
+        os.system(filename)
+        self.installButton.config(text="Check", command=self.reopen, state="normal")
         
-if not BYPASS_CHECKS:
-    # Check and install winget
-    print("Checking for winget...")
-    if not CheckForWinget():
-        InstallWinget()
-    print("> Winget is installed on your system.")
+    def reopen(self):
+        self.pack_forget()
+        next_page()
+        
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
 
-    print("")
+class CheckPythonPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.configure()
+        self.label = ttk.Label(self, text="Checking for Python", font=("Segoe UI", 16))
+        self.label.pack(anchor="center", side="top")
+        emptyLine(self, 16)
+        self.checkPython()
+    def checkPython(self):
+        import subprocess
+        try:
+            version = subprocess.run(["python", "--version"], capture_output=True, text=True).stdout.replace("\n", "")
+            found = False
+            for v in PYTHON_VERSIONS:
+                if v in version:
+                    found = True
+            
+            if found:
+                self.label.config(text=f"Python found ({version})", foreground=PASTEL_GREEN)
+                self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+                self.button.pack(side="bottom")
+            else:
+                self.label.config(text="Python found, but wrong version", foreground=PASTEL_YELLOW)
+                self.openWebsiteButton = ttk.Button(self, text="Open download website", command=self.openWebsite, width=30)
+                self.openWebsiteButton.pack()
+                self.button = ttk.Button(self, text="Exit", command=sys.exit, width=30)
+                self.button.pack(side="bottom", pady=10)
+        except FileNotFoundError:
+            self.label.config(text="Python not found", foreground=PASTEL_RED)
+            self.installButton = ttk.Button(self, text="Install", command=self.installPython, width=30)
+            self.installButton.pack()
+            self.button = ttk.Button(self, text="Exit", command=sys.exit, width=30)
+            self.button.pack(side="bottom", pady=10)
+    def openWebsite(self):
+        import webbrowser
+        webbrowser.open("https://wiki.tumppi066.fi/tutorials/installation/#step-1-download-python-and-git")      
+        
+    def installPython(self):
+        import requests
+        filename = PYTHON_DOWNLOAD_URL.split("/")[-1]
+        # Streaming, so we can iterate over the response.
+        response = requests.get(PYTHON_DOWNLOAD_URL, stream=True)
 
-    # Check and install python
-    print("Checking for python...")
-    if not CheckForPython():
-        InstallPython()
-        print("> Python 3.11.x is installed on your system.")
-        # Check if it's the default
-        if not CheckForPython():
-            PrintRed("> Python 3.11.x is not the default python version on your system. Please uninstall all your previous versions. Then run this installer again.")
-            from tkinter import messagebox
-            webbrowser.open("https://wiki.tumppi066.fi/tutorials/installing-the-correct-python-version")
-            messagebox.showinfo("Python Installer", "Python 3.11.x is not the default python version on your system. Please uninstall all your previous versions. Then run this installer again.")
-            exit()
-    else:
-        print("> Python 3.11.x is installed on your system.")
-            
-    print("")
-            
-    print("Checking for git...")
-    if not CheckGit():
-        InstallGit()
-    else:
-        print("> Git is installed on your system.")
+        # Sizes in bytes.
+        total_size = int(response.headers.get("content-length", 0))
+        block_size = 1024
+
+        lastUpdate = time.time()
+        downloaded_size = 0
+        with open(filename, "wb") as file:
+            for data in response.iter_content(block_size):
+                file.write(data)
+                downloaded_size += len(data)
+                percentage = (downloaded_size / total_size) * 100
+                print(f"Downloaded: {downloaded_size}/{total_size} bytes ({percentage:.2f}%)               ", end="\r")
+                if time.time() - lastUpdate > 0.1:
+                    self.installButton.config(text=f"Downloading {percentage:.2f}%", state="disabled")
+                    self.master.update()
+                    self.update()
+                    lastUpdate = time.time()
+
+        self.installButton.config(text="Installing", state="disabled")
+        self.master.update()
+        self.update()
+        from tkinter import messagebox
+        messagebox.showinfo("Python installer", "The installer will now open. You can use the default settings. After the installation is complete, click check.")
+        # Run the installer silently
+        os.system(filename)
+        self.installButton.config(text="Check", command=self.reopen, state="normal")
+          
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class LocationPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Install location", font=("Segoe UI", 16))
+        self.label.pack()
+        emptyLine(self, 16)
+        self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+        self.button.pack(side="bottom", pady=10)
+        self.entry = ttk.Entry(self, width=50)
+        self.entry.pack(side="left")
+        self.entry.insert(0, DEFAULT_INSTALL_LOCATION)
+        self.getPathButton = ttk.Button(self, text="...", command=self.getPath)
+        self.getPathButton.pack(side="right")
+    def getPath(self):
+        from tkinter import filedialog
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, filedialog.askdirectory())
+    def next(self):
+        global install_location
+        global CURRENT_PAGE
+        install_location = self.entry.get()
+        if not os.path.exists(install_location):
+            os.makedirs(install_location)
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class ServerPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Installation Server", font=("Segoe UI", 16))
+        self.label.pack()
+        emptyLine(self, 16)
+        self.combobox = ttk.Combobox(self, values=list(SERVERS.keys()), width=50)
+        self.combobox.pack()
+        self.combobox.set(DEFAULT_SERVER)
+        self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+        self.button.pack(pady=10)
+    def next(self):
+        global server
+        global CURRENT_PAGE
+        server = SERVERS[self.combobox.get()]
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class BranchPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Branch", font=("Segoe UI", 16))
+        self.label.pack()
+        emptyLine(self, 16)
+        self.combobox = ttk.Combobox(self, values=list(BRANCHES.keys()), width=50)
+        self.combobox.pack()
+        self.combobox.set("main")
+        self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+        self.button.pack(pady=10)
+    def next(self):
+        global branch
+        global CURRENT_PAGE
+        branch = BRANCHES[self.combobox.get()]
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class DisclaimerPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text=f"This program will:\n- Clone the repository ({install_location})\n- Create a Python virtual environment\n- Install the requirements\n- Create a run.bat file\n- Create a shortcut on the desktop and start menu\n\nThe program will not run the application")
+        self.label.pack()
+        self.button = ttk.Button(self, text="Next", command=self.next, width=30)
+        self.button.pack(pady=10)
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class ClonePage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.configure(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+        self.pack_propagate(False)
+        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH, maximum=10)
+        self.progress.pack(side="top")
+        emptyLine(self, 40)
+        self.label = ttk.Label(self, text="Clone repository", font=("Segoe UI", 16))
+        self.label.pack()
+        self.button = ttk.Button(self, text="Clone", command=self.clone, width=30)
+        self.button.pack(pady=10)
+    def clone(self):
+        import subprocess
+        global install_location
+        global server
+        global branch
+        self.progress.start()
+        self.button.config(text="Cloning", state="disabled")
+        os.chdir(install_location)
+        def cloneThread():
+            subprocess.run(["git", "clone", "--branch", branch, server, "app"])
+            self.progress.stop()
+            self.label.config(text="Repository cloned", foreground=PASTEL_GREEN)
+            self.button.config(text="Next", command=self.next, state="normal")
+        
+        import threading
+        thread = threading.Thread(target=cloneThread)
+        thread.start()
+        
+        while thread.is_alive():
+            self.master.update()
+            self.update()
+            time.sleep(0.1)
         
 
-from tkinter import ttk
-import tkinter as tk
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
 
-try: 
-    import sv_ttk
-except: 
-    os.system("pip install sv-ttk")
-    import sv_ttk
+class PythonVenvCreationPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Python virtual environment", font=("Segoe UI", 16))
+        self.label.pack()
+        self.button = ttk.Button(self, text="Create Venv", command=self.createVenv, width=30)
+        self.button.pack(pady=10)
 
+    def createVenv(self):
+        global install_location
+        self.button.config(text="Creating Venv", state="disabled")
+        self.master.update()
+        def venvThread():
+            os.chdir(install_location)
+            # Run the command to create the virtual environment, run it in a way that microsoft defender doesn't block it
+            os.system(f"cmd /c python -m venv venv")
+            self.label.config(text="Python virtual environment created", foreground=PASTEL_GREEN)
+            self.button.config(text="Next", command=self.next, state="normal")
+            
+        import threading
+        thread = threading.Thread(target=venvThread)
+        thread.start()
+        
+        while thread.is_alive():
+            self.master.update()
+            self.update()
+            time.sleep(0.1)
+        
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
 
+class InstallRequirements(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.configure(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+        self.pack_propagate(False)
+        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH, maximum=10)
+        self.progress.pack(side="top")
+        emptyLine(self, 40)
+        self.label = ttk.Label(self, text="Requirements installation", font=("Segoe UI", 16))
+        self.label.pack()
+        self.button = ttk.Button(self, text="Install", command=self.install, width=30)
+        self.button.pack(pady=10)
+    def install(self):
+        import subprocess
+        global install_location
+        self.progress.start()
+        
+        self.button.config(text="Installing", state="disabled")
+        self.master.update()
+        os.chdir(install_location + "/app")
+        def installThread():
+            subprocess.run(["../venv/Scripts/python", "-m", "pip", "install", "--upgrade", "pip"])
+            subprocess.run(["../venv/Scripts/python", "-m", "pip", "install", "wheel"])
+            subprocess.run(["../venv/Scripts/python", "-m", "pip", "install", "-r", "requirements.txt"])
+            self.progress.stop()
+            self.label.config(text="Requirements installed", foreground=PASTEL_GREEN)
+            self.button.config(text="Next", command=self.next, state="normal")
 
-# Create the main window
-root = tk.Tk()
-root.title("ETS2LA Installer")
-root.geometry("400x280")
-root.resizable(False, False)
+        import threading
+        thread = threading.Thread(target=installThread)
+        thread.start()
+        
+        while thread.is_alive():
+            self.master.update()
+            self.update()
+            time.sleep(0.1)
 
-# Try and color the title bar (windows 11 only)
+    def next(self):
+        global CURRENT_PAGE
+        CURRENT_PAGE += 1
+        self.pack_forget()
+        next_page()
+
+class RunPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.label = ttk.Label(self, text="Lane Assist installed", font=("Segoe UI", 16))
+        self.label.pack()
+        self.button = ttk.Button(self, text="Open Folder", command=self.run, width=30)
+        self.button.pack(pady=10)
+    def run(self):
+        # Create the run.bat file
+        fileContent = f"cd {install_location}/app\n{install_location}/venv/Scripts/python main.py"
+        with open(install_location + "/run.bat", "w") as file:
+            file.write(fileContent)
+        # Open the folder, running would trigger antivirus
+        os.startfile(install_location)
+        sys.exit()
+
+#endregion
+#region Main logic
+CURRENT_PAGE = 0
+PAGE_ORDER = [
+    CheckGitPage,
+    CheckPythonPage,
+    LocationPage, 
+    ServerPage,
+    BranchPage,
+    DisclaimerPage,
+    ClonePage,
+    PythonVenvCreationPage,
+    InstallRequirements,
+    RunPage
+]
+
+totalPages = len(PAGE_ORDER) + 1
+# Make a progress bar
+progress = ttk.Progressbar(root, maximum=totalPages, length=WINDOW_WIDTH, value=0)
+progress.pack()
+
+def next_page():
+    global CURRENT_PAGE
+    if CURRENT_PAGE < len(PAGE_ORDER):
+        PAGE_ORDER[CURRENT_PAGE](root).pack(anchor="center", side="top", expand=True)
+    progress.step()
+
+next_page()
+#endregion
+#region Tkinter theming
+sv.set_theme("dark")
+
+# Color the title bar
 root.update()
-ColorTitleBar(root)
+colorTitleBar()
+#endregion
 
-# Create the main frame
-frame = ttk.Labelframe(root, text="Installer", width=400, height=300)
-frame.grid_propagate(False)
-frame.pack_propagate(False)
-frame.pack(padx=10, pady=10)
-
-# This is used to check if the path is empty or not
-def ChangePath(path):
-    global pathVar
-    global warningLabel
-    """
-    Change the install location
-    """
-    pathVar.set(path)
-    # Check if the path is empty
-    if os.path.exists(path):
-        if os.listdir(path):
-            warningLabel.config(text="Error: The install location is not empty.")
-            warningLabel.config(foreground="red")
-            installButton.config(state="disabled")
-        else:
-            warningLabel.config(text="")
-            installButton.config(state="normal")
-    else:
-        warningLabel.config(text="")
-        installButton.config(state="normal")
-        
-    # Check if the path has spaces
-    if " " in path:
-        warningLabel.config(text="Error: The install location contains spaces.")
-        warningLabel.config(foreground="red")
-        installButton.config(state="disabled")
-        
-    root.update()
-
-# Create the current path input box
-pathVar = tk.StringVar()
-currentPathLabel = ttk.Entry(frame, width=40, textvariable=pathVar, validatecommand=lambda: ChangePath(pathVar.get()), validate="all")
-currentPathLabel.pack(pady=10)
-currentPathLabel.bind("<Return>", lambda e: ChangePath(pathVar.get()))
-
-
-# Create the change path button
-changePathButton = ttk.Button(frame, text="Change install location", command=lambda: ChangePath(AskForPath()), width=39)
-changePathButton.pack(pady=0)
-
-# Create a warning for a path not empty
-warningLabel = ttk.Label(frame, text="", foreground="yellow")
-warningLabel.pack(pady=5)
-
-# Create the mirror selector
-mirrorVar = tk.StringVar()
-mirrorVar.set("Github")
-mirrorLabel = ttk.Label(frame, text="Select a mirror:")
-mirrorLabel.pack(pady=5)
-mirrorSelector = ttk.Combobox(frame, textvariable=mirrorVar, values=["Github", "Sourceforge"], width=36)
-mirrorSelector.pack(pady=5)
-
-# Create the install button
-installButton = ttk.Button(frame, text="Install", command=lambda: Install(pathVar.get(), mirrorVar.get()), width=39)
-installButton.pack(pady=5)
-
-ChangePath(DEFAULT_INSTALL_LOCATION)
-sv_ttk.set_theme("dark")
 root.mainloop()
