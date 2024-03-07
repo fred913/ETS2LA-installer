@@ -299,7 +299,7 @@ class ClonePage(ttk.Frame):
         while thread.is_alive():
             self.master.update()
             self.update()
-            time.sleep(0.1)
+            time.sleep(0.02)
         
 
     def next(self):
@@ -339,7 +339,7 @@ class PythonVenvCreationPage(ttk.Frame):
         while thread.is_alive():
             self.master.update()
             self.update()
-            time.sleep(0.1)
+            time.sleep(0.02)
         
     def next(self):
         global CURRENT_PAGE
@@ -382,7 +382,7 @@ class InstallRequirements(ttk.Frame):
         while thread.is_alive():
             self.master.update()
             self.update()
-            time.sleep(0.1)
+            time.sleep(0.02)
 
     def next(self):
         global CURRENT_PAGE
