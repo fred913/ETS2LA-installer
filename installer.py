@@ -268,24 +268,25 @@ class ClonePage(ttk.Frame):
         super().__init__(master)
         self.configure(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
         self.pack_propagate(False)
-        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH, maximum=10)
-        self.progress.pack(side="top")
         emptyLine(self, 40)
         self.label = ttk.Label(self, text="Clone repository", font=("Segoe UI", 16))
         self.label.pack()
         self.button = ttk.Button(self, text="Clone", command=self.clone, width=30)
         self.button.pack(pady=10)
     def clone(self):
+        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH//2, maximum=40)
+        self.progress.pack()
         import subprocess
         global install_location
         global server
         global branch
-        self.progress.start()
+        self.progress.start(interval=20)
         self.button.config(text="Cloning", state="disabled")
         os.chdir(install_location)
         def cloneThread():
             subprocess.run(["git", "clone", "--branch", branch, server, "app"])
             self.progress.stop()
+            self.progress.pack_forget()
             self.label.config(text="Repository cloned", foreground=PASTEL_GREEN)
             self.button.config(text="Next", command=self.next, state="normal")
         
@@ -314,13 +315,18 @@ class PythonVenvCreationPage(ttk.Frame):
         self.button.pack(pady=10)
 
     def createVenv(self):
+        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH//2, maximum=40)
+        self.progress.pack()
         global install_location
+        self.progress.start(interval=20)
         self.button.config(text="Creating Venv", state="disabled")
         self.master.update()
         def venvThread():
             os.chdir(install_location)
             # Run the command to create the virtual environment, run it in a way that microsoft defender doesn't block it
             os.system(f"cmd /c python -m venv venv")
+            self.progress.stop()
+            self.progress.pack_forget()
             self.label.config(text="Python virtual environment created", foreground=PASTEL_GREEN)
             self.button.config(text="Next", command=self.next, state="normal")
             
@@ -344,18 +350,17 @@ class InstallRequirements(ttk.Frame):
         super().__init__(master)
         self.configure(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
         self.pack_propagate(False)
-        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH, maximum=10)
-        self.progress.pack(side="top")
         emptyLine(self, 40)
         self.label = ttk.Label(self, text="Requirements installation", font=("Segoe UI", 16))
         self.label.pack()
         self.button = ttk.Button(self, text="Install", command=self.install, width=30)
         self.button.pack(pady=10)
     def install(self):
+        self.progress = ttk.Progressbar(self, mode="indeterminate", length=WINDOW_WIDTH//2, maximum=40)
+        self.progress.pack()
         import subprocess
         global install_location
-        self.progress.start()
-        
+        self.progress.start(interval=20)
         self.button.config(text="Installing", state="disabled")
         self.master.update()
         os.chdir(install_location + "/app")
@@ -364,6 +369,7 @@ class InstallRequirements(ttk.Frame):
             subprocess.run(["../venv/Scripts/python", "-m", "pip", "install", "wheel"])
             subprocess.run(["../venv/Scripts/python", "-m", "pip", "install", "-r", "requirements.txt"])
             self.progress.stop()
+            self.progress.pack_forget()
             self.label.config(text="Requirements installed", foreground=PASTEL_GREEN)
             self.button.config(text="Next", command=self.next, state="normal")
 
@@ -391,8 +397,12 @@ class RunPage(ttk.Frame):
         self.button.pack(pady=10)
     def run(self):
         # Create the run.bat file
-        fileContent = f"cd {install_location}/app\n{install_location}/venv/Scripts/python main.py"
+        fileContent = f'cmd /k "cd {install_location}/app & {install_location}/venv/Scripts/python main.py" & pause'
         with open(install_location + "/run.bat", "w") as file:
+            file.write(fileContent)
+        # Create the activate.bat file
+        fileContent = f'cmd /k "cd {install_location}/venv/Scripts & .\\activate & cd {install_location}/app" & pause'
+        with open(install_location + "/activate.bat", "w") as file:
             file.write(fileContent)
         # Open the folder, running would trigger antivirus
         os.startfile(install_location)
