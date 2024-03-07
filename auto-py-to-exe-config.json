@@ -60,6 +60,10 @@
   {
    "optionDest": "collect_all",
    "value": "sv_ttk"
+  },
+  {
+   "optionDest": "datas",
+   "value": "C:/Users/Tuomas/Documents/GitHub/Euro-Truck-Simulator-2-Lane-Assist-Installer/if_antivirus_blocks_the_installer.txt;."
   }
  ],
  "nonPyinstallerOptions": {

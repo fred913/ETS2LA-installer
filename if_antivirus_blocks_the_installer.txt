@@ -1,0 +1,4 @@
+You can find manual instructions here:
+https://wiki.tumppi066.fi/tutorials/installation/#manual-installation
+
+These instructions use the exact same file, but instead of it being compiled to an .exe file it's just the python file itself.

@@ -18,6 +18,8 @@ PASTEL_RED = "#ff8a8a"
 PASTEL_YELLOW = "#fffb8a"
 GIT_DOWNLOAD_URL = "https://github.com/git-for-windows/git/releases/download/v2.44.0.windows.1/Git-2.44.0-64-bit.exe"
 PYTHON_DOWNLOAD_URL = "https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe"
+OPEN_PYTHON_INSTALLER = False
+OPEN_GIT_INSTALLER = False
 #endregion
 #region Imports
 import tkinter as tk
@@ -96,7 +98,7 @@ class CheckGitPage(ttk.Frame):
         from tkinter import messagebox
         messagebox.showinfo("Git installer", "The installer will now open. You can use the default settings. After the installation is complete, click check.")
         # Run the installer silently
-        os.system(filename)
+        os.startfile(filename)
         self.installButton.config(text="Check", command=self.reopen, state="normal")
         
     def reopen(self):
@@ -176,7 +178,7 @@ class CheckPythonPage(ttk.Frame):
         from tkinter import messagebox
         messagebox.showinfo("Python installer", "The installer will now open. You can use the default settings. After the installation is complete, click check.")
         # Run the installer silently
-        os.system(filename)
+        os.startfile(filename)
         self.installButton.config(text="Check", command=self.reopen, state="normal")
           
     def next(self):
